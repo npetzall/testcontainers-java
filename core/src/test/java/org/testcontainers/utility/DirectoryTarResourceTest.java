@@ -27,9 +27,9 @@ public class DirectoryTarResourceTest {
                         .withDockerfileFromBuilder(builder ->
                                 builder.from("alpine:3.3")
                                         .copy("/tmp/foo", "/foo")
-                                        .cmd("cat /foo/src/test/resources/test-recursive-file.txt")
+                                        .cmd("cat /foo/test-recursive-file.txt")
                                         .build()
-                        ).withFileFromFile("/tmp/foo", new File(".")))  // '.' is expected to be the project base directory, so all source code/resources should be copied in
+                        ).withFileFromFile("/tmp/foo", new File("src/test/resources/")))
                 .withStartupCheckStrategy(new OneShotStartupCheckStrategy())
                 .withLogConsumer(wait.andThen(toString));
 
