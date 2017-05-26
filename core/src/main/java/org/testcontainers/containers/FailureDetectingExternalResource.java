@@ -18,7 +18,7 @@ import java.util.List;
 public class FailureDetectingExternalResource implements TestRule {
     @Override
     public Statement apply(Statement base, Description description) {
-
+        assumptions(description);
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -42,8 +42,11 @@ public class FailureDetectingExternalResource implements TestRule {
         };
     }
 
-    protected void starting(Description description) {
+    protected void assumptions(Description description) {
 
+    }
+
+    protected void starting(Description description) {
     }
 
     protected void succeeded(Description description) {

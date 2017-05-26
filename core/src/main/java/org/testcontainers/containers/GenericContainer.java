@@ -42,9 +42,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
+import static org.junit.Assume.assumeNoException;
 import static org.testcontainers.containers.output.OutputFrame.OutputType.STDERR;
 import static org.testcontainers.containers.output.OutputFrame.OutputType.STDOUT;
 import static org.testcontainers.utility.CommandLine.runShellCommand;
@@ -61,6 +63,8 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
     private static final Charset UTF8 = Charset.forName("UTF-8");
 
     public static final int CONTAINER_RUNNING_TIMEOUT_SEC = 30;
+
+    private List<Consumer<Description>> assumptions = new ArrayList<>();
 
     /*
      * Default settings
@@ -108,7 +112,9 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
     /*
      * Unique instance of DockerClient for use by this container object.
      */
-    protected DockerClient dockerClient = DockerClientFactory.instance().client();
+    protected DockerClient dockerClient = null;
+
+    protected Supplier<DockerClient> dockerClientSupplier = () -> DockerClientFactory.instance().client();
 
     /*
      * Info about the Docker server; lazily fetched.
@@ -154,6 +160,36 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
         this.image = image;
     }
 
+    @Override
+    protected void assumptions(Description description) {
+        super.assumptions(description);
+        assumptions.forEach(c -> c.accept(description));
+    }
+
+    public SELF withAssumption(Consumer<Description>...assumptions) {
+        for (Consumer assumption : assumptions) {
+            this.assumptions.add(assumption);
+        }
+        return self();
+    }
+
+    public SELF assumeDocker() {
+        return withAssumption(d -> {
+            try {
+                dockerClient = dockerClientSupplier.get();
+            } catch (Exception e) {
+                assumeNoException(e);
+            }
+        });
+    }
+
+    public DockerClient getDockerClient() {
+        if (dockerClient == null) {
+            dockerClient = dockerClientSupplier.get();
+        }
+        return dockerClient;
+    }
+
     /**
      * Starts the container using docker, pulling an image if necessary.
      */
@@ -184,6 +220,7 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
 
     private void tryStart(Profiler profiler) {
         try {
+            getDockerClient();
             String dockerImageName = image.get();
             logger().debug("Starting container: {}", dockerImageName);
 
@@ -321,7 +358,6 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
     }
 
     private void applyConfiguration(CreateContainerCmd createCommand) {
-
         // Set up exposed ports (where there are no host port bindings defined)
         ExposedPort[] portArray = exposedPorts.stream()
                 .map(ExposedPort::new)
@@ -689,6 +725,7 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
      */
     @Override
     public Boolean isRunning() {
+        getDockerClient();
         try {
             return dockerClient.inspectContainerCmd(containerId).exec().getState().getRunning();
         } catch (DockerException e) {
@@ -722,9 +759,6 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
     @Override
     public void setDockerImageName(@NonNull String dockerImageName) {
         this.image = new RemoteDockerImage(dockerImageName);
-
-        // Mimic old behavior where we resolve image once it's set
-        getDockerImageName();
     }
 
     /**
@@ -785,6 +819,7 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
      */
     @Override
     public void followOutput(Consumer<OutputFrame> consumer, OutputFrame.OutputType... types) {
+        getDockerClient();
         LogUtils.followOutput(dockerClient, containerId, consumer, types);
     }
 
@@ -800,7 +835,7 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
 
     @Override
     public synchronized Info fetchDockerDaemonInfo() throws IOException {
-
+        getDockerClient();
         if (this.dockerDaemonInfo == null) {
             this.dockerDaemonInfo = this.dockerClient.infoCmd().exec();
         }
@@ -834,8 +869,8 @@ public class GenericContainer<SELF extends GenericContainer<SELF>>
         if (!isRunning()) {
             throw new IllegalStateException("Container is not running so exec cannot be run");
         }
-
-        this.dockerClient
+        getDockerClient();
+        dockerClient
                 .execCreateCmd(this.containerId)
                 .withCmd(command);
 

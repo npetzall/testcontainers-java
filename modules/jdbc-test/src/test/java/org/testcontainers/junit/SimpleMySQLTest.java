@@ -45,7 +45,7 @@ public class SimpleMySQLTest {
 
     @Test
     public void testSimple() throws SQLException {
-        MySQLContainer mysql = (MySQLContainer) new MySQLContainer()
+        MySQLContainer mysql = new MySQLContainer<>()
                 .withConfigurationOverride("somepath/mysql_conf_override")
                 .withLogConsumer(new Slf4jLogConsumer(logger));
         mysql.start();
@@ -62,7 +62,7 @@ public class SimpleMySQLTest {
 
     @Test
     public void testSpecificVersion() throws SQLException {
-        MySQLContainer mysqlOldVersion = (MySQLContainer) new MySQLContainer("mysql:5.5")
+        MySQLContainer mysqlOldVersion = new MySQLContainer<>("mysql:5.5")
                 .withConfigurationOverride("somepath/mysql_conf_override")
                 .withLogConsumer(new Slf4jLogConsumer(logger));
         mysqlOldVersion.start();

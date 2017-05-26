@@ -36,7 +36,7 @@ public class RemoteDockerImage extends LazyFuture<String> {
 
     @Override
     protected final String resolve() {
-        Profiler profiler = new Profiler("Rule creation - prefetch image");
+        Profiler profiler = new Profiler("Resolving image");
         Logger logger = DockerLoggerFactory.getLogger(dockerImageName);
         profiler.setLogger(logger);
 
