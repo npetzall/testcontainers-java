@@ -27,9 +27,6 @@ public class SimpleVirtuosoTest {
     public void testSimple() throws SQLException, IllegalAccessException, InstantiationException, ClassNotFoundException {
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setDataSource(getDataSource());
-        //hikariConfig.setJdbcUrl(virtuoso.getJdbcUrl());
-        //hikariConfig.setUsername(virtuoso.getUsername());
-        //hikariConfig.setPassword(virtuoso.getPassword());
         hikariConfig.setConnectionTestQuery("SELECT 1");
 
         HikariDataSource ds = new HikariDataSource(hikariConfig);

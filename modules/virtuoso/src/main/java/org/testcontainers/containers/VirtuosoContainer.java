@@ -1,6 +1,5 @@
 package org.testcontainers.containers;
 
-import org.junit.runner.Description;
 import org.rnorth.ducttape.inconsistents.Inconsistents;
 import org.rnorth.ducttape.ratelimits.RateLimiter;
 import org.rnorth.ducttape.ratelimits.RateLimiterBuilder;
@@ -23,21 +22,18 @@ public class VirtuosoContainer<SELF extends VirtuosoContainer<SELF>> extends Jdb
             .build();
 
     public VirtuosoContainer() {
-        super(IMAGE + ":1.0.0-virtuoso7.2.2");
+        this(IMAGE + ":1.0.0-virtuoso7.2.2");
     }
 
     public VirtuosoContainer(String dockerImageName) {
         super(dockerImageName);
-    }
-
-    @Override
-    protected void starting(Description description) {
-        try {
-            getJdbcDriverInstance();
-        } catch (Exception e) {
-            assumeNoException(description.toString(), e);
-        }
-        super.starting(description);
+        withAssumption(description -> {
+            try {
+                getJdbcDriverInstance();
+            } catch (Exception e) {
+                assumeNoException(description.toString(), e);
+            }
+        });
     }
 
     @Override

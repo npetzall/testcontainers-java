@@ -1,7 +1,5 @@
 package org.testcontainers.containers;
 
-import org.junit.runner.Description;
-
 import static org.junit.Assume.assumeNoException;
 
 /**
@@ -15,21 +13,18 @@ public class OracleContainer<SELF extends OracleContainer<SELF>> extends JdbcDat
     private static final int APEX_HTTP_PORT = 8080;
 
     public OracleContainer() {
-        super(IMAGE + ":latest");
+        this(IMAGE + ":latest");
     }
 
     public OracleContainer(String dockerImageName) {
         super(dockerImageName);
-    }
-
-    @Override
-    protected void starting(Description description) {
-        try {
-            getJdbcDriverInstance();
-        } catch (Exception e) {
-            assumeNoException(description.toString(), e);
-        }
-        super.starting(description);
+        withAssumption(description -> {
+            try {
+                getJdbcDriverInstance();
+            } catch (Exception e) {
+                assumeNoException(description.toString(), e);
+            }
+        });
     }
 
     @Override
