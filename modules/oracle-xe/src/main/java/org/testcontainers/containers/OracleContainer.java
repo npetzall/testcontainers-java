@@ -1,9 +1,13 @@
 package org.testcontainers.containers;
 
+import org.junit.runner.Description;
+
+import static org.junit.Assume.assumeNoException;
+
 /**
  * @author gusohal
  */
-public class OracleContainer extends JdbcDatabaseContainer {
+public class OracleContainer<SELF extends OracleContainer<SELF>> extends JdbcDatabaseContainer<SELF> {
 
     public static final String NAME = "oracle";
     public static final String IMAGE = "wnameless/oracle-xe-11g";
@@ -16,6 +20,16 @@ public class OracleContainer extends JdbcDatabaseContainer {
 
     public OracleContainer(String dockerImageName) {
         super(dockerImageName);
+    }
+
+    @Override
+    protected void starting(Description description) {
+        try {
+            getJdbcDriverInstance();
+        } catch (Exception e) {
+            assumeNoException(description.toString(), e);
+        }
+        super.starting(description);
     }
 
     @Override

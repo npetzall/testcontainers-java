@@ -29,6 +29,11 @@
             <artifactId>mariadb</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>oracle-xe</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Database drivers for testing -->
         <dependency>

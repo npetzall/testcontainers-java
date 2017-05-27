@@ -44,6 +44,8 @@ public class ContainerDatabaseDriver implements Driver {
             "(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)" +
             ".*");
 
+    private static final Pattern DRIVER_PATHS_MATCHING_PATTERN = Pattern.compile(".*([\\?&]?)TC_DRIVER_PATHS=([^&]+).*");
+
     private static final Pattern TC_PARAM_MATCHING_PATTERN = Pattern.compile("([A-Z_]+)=([^\\?&]+)");
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ContainerDatabaseDriver.class);
 
@@ -111,6 +113,9 @@ public class ContainerDatabaseDriver implements Driver {
 
                 Map<String, String> parameters = getContainerParameters(url);
 
+                String[] driverPaths = getDriverPaths(url);
+                queryString = sanitize(queryString);
+
                 /*
                   Find a matching container type using ServiceLoader.
                  */
@@ -118,6 +123,9 @@ public class ContainerDatabaseDriver implements Driver {
                 for (JdbcDatabaseContainerProvider candidateContainerType : databaseContainers) {
                     if (candidateContainerType.supports(databaseType)) {
                         container = candidateContainerType.newInstance(tag);
+                        if (driverPaths.length > 0) {
+                            container.withDrivers(driverPaths);
+                        }
                         delegate = container.getJdbcDriverInstance();
                     }
                 }
@@ -173,6 +181,36 @@ public class ContainerDatabaseDriver implements Driver {
         }
 
         return results;
+    }
+
+    private String[] getDriverPaths(String url) {
+        Matcher matcher = DRIVER_PATHS_MATCHING_PATTERN.matcher(url);
+        if (matcher.find()) {
+            return matcher.group(2).split(",");
+        }
+        return new String[0];
+    }
+
+    private String sanitize(String queryString) {
+        String sanitized = queryString;
+        Matcher matcher = DRIVER_PATHS_MATCHING_PATTERN.matcher(sanitized);
+        if (matcher.find()) {
+            sanitized = sanitized.replace("TC_DRIVER_PATHS="+matcher.group(2), "");
+        }
+        matcher = INITSCRIPT_MATCHING_PATTERN.matcher(queryString);
+        if (matcher.matches()) {
+            sanitized = sanitized.replace("TC_INITSCRIPT=" + matcher.group(2), "");
+        }
+        matcher = INITFUNCTION_MATCHING_PATTERN.matcher(queryString);
+        if (matcher.matches()) {
+            sanitized = sanitized.replace("TC_INITFUNCTION=" + matcher.group(2) + "::" + matcher.group(4), "");
+        }
+        sanitized = sanitized.replaceAll("\\?[&]*", "?");
+        sanitized = sanitized.replaceAll("[&]+", "&");
+        if (sanitized.length() == 1) {
+            sanitized = "";
+        }
+        return sanitized;
     }
 
     /**

@@ -18,7 +18,7 @@ public class OracleJDBCDriverTest {
 
     @Test
     public void testOracleWithNoSpecifiedVersion() throws SQLException {
-        performSimpleTest("jdbc:tc:oracle://hostname/databasename");
+        performSimpleTest("jdbc:tc:oracle://hostname/databasename?TC_DRIVER_PATHS=../../ext-lib/ojdbc*");
     }
 
 

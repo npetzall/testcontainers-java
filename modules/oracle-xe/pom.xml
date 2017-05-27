@@ -27,8 +27,8 @@
         <!-- Database connection pool for testing -->
         <dependency>
             <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP-java6</artifactId>
-            <version>2.3.5</version>
+            <artifactId>HikariCP</artifactId>
+            <version>2.6.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -38,13 +38,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Oracle JDBC Driver -->
-        <dependency>
-            <groupId>com.oracle</groupId>
-            <artifactId>ojdbc6</artifactId>
-            <version>11.2.0.4</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
 

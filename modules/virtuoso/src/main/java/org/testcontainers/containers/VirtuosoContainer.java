@@ -1,5 +1,6 @@
 package org.testcontainers.containers;
 
+import org.junit.runner.Description;
 import org.rnorth.ducttape.inconsistents.Inconsistents;
 import org.rnorth.ducttape.ratelimits.RateLimiter;
 import org.rnorth.ducttape.ratelimits.RateLimiterBuilder;
@@ -7,6 +8,8 @@ import org.rnorth.ducttape.ratelimits.RateLimiterBuilder;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assume.assumeNoException;
 
 public class VirtuosoContainer<SELF extends VirtuosoContainer<SELF>> extends JdbcDatabaseContainer<SELF> {
 
@@ -25,6 +28,16 @@ public class VirtuosoContainer<SELF extends VirtuosoContainer<SELF>> extends Jdb
 
     public VirtuosoContainer(String dockerImageName) {
         super(dockerImageName);
+    }
+
+    @Override
+    protected void starting(Description description) {
+        try {
+            getJdbcDriverInstance();
+        } catch (Exception e) {
+            assumeNoException(description.toString(), e);
+        }
+        super.starting(description);
     }
 
     @Override

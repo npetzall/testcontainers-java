@@ -5,8 +5,11 @@ import org.rnorth.ducttape.ratelimits.RateLimiter;
 import org.rnorth.ducttape.ratelimits.RateLimiterBuilder;
 import org.rnorth.ducttape.unreliables.Unreliables;
 import org.testcontainers.containers.traits.LinkableContainer;
+import org.testcontainers.utility.JdbcDriverUtil;
 import org.testcontainers.utility.MountableFile;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.SQLException;
@@ -23,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class JdbcDatabaseContainer<SELF extends JdbcDatabaseContainer<SELF>> extends GenericContainer<SELF> implements LinkableContainer {
 
     private static final Object DRIVER_LOAD_MUTEX = new Object();
+    private URL[] drivers = new URL[0];
     private Driver driver;
     protected Map<String, String> parameters = new HashMap<>();
 
@@ -33,6 +37,11 @@ public abstract class JdbcDatabaseContainer<SELF extends JdbcDatabaseContainer<S
 
     public JdbcDatabaseContainer(String dockerImageName) {
         super(dockerImageName);
+    }
+
+    public SELF withDrivers(String...driverPaths) {
+        drivers = JdbcDriverUtil.getDrivers(driverPaths);
+        return self();
     }
 
     /**
@@ -85,25 +94,6 @@ public abstract class JdbcDatabaseContainer<SELF extends JdbcDatabaseContainer<S
     }
 
     /**
-     * Obtain an instance of the correct JDBC driver for this particular database container type
-     * @return a JDBC Driver
-     */
-    public Driver getJdbcDriverInstance() {
-
-        synchronized (DRIVER_LOAD_MUTEX) {
-            if (driver == null) {
-                try {
-                    driver = (Driver) Class.forName(this.getDriverClassName()).newInstance();
-                } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-                    throw new RuntimeException("Could not get Driver", e);
-                }
-            }
-        }
-
-        return driver;
-    }
-
-    /**
      * Creates a connection to the underlying containerized database instance.
      *
      * @param queryString   any special query string parameters that should be appended to the JDBC connection URL. The
@@ -124,6 +114,33 @@ public abstract class JdbcDatabaseContainer<SELF extends JdbcDatabaseContainer<S
         } catch (Exception e) {
             throw new SQLException("Could not create new connection", e);
         }
+    }
+
+    /**
+     * Obtain an instance of the correct JDBC driver for this particular database container type
+     * @return a JDBC Driver
+     */
+    public Driver getJdbcDriverInstance() {
+
+        synchronized (DRIVER_LOAD_MUTEX) {
+            if (driver == null) {
+                try {
+                    if (drivers.length > 0) {
+                        driver = (Driver) Class.forName(
+                                    this.getDriverClassName(),
+                                    true,
+                                    URLClassLoader.newInstance(drivers, this.getClass().getClassLoader()))
+                                .newInstance();
+                    } else {
+                        driver = (Driver) Class.forName(this.getDriverClassName()).newInstance();
+                    }
+                } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+                    throw new RuntimeException("Could not get Driver", e);
+                }
+            }
+        }
+
+        return driver;
     }
 
     protected void optionallyMapResourceParameterAsVolume(@NotNull String paramName, @NotNull String pathNameInContainer, @NotNull String defaultResource) {

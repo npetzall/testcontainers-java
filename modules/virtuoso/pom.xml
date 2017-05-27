@@ -30,19 +30,11 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Database driver for testing -->
-        <dependency>
-            <groupId>virtuoso</groupId>
-            <artifactId>jdbc-driver</artifactId>
-            <version>4.0</version>
-            <scope>test</scope>
-        </dependency>
-
         <!-- Database connection pool for testing -->
         <dependency>
             <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP-java6</artifactId>
-            <version>2.3.8</version>
+            <artifactId>HikariCP</artifactId>
+            <version>2.6.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>

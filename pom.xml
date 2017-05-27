@@ -169,16 +169,11 @@
         <module>modules/nginx</module>
         <module>modules/mariadb</module>
         <module>modules/jdbc-test</module>
+        <module>modules/oracle-xe</module>
+        <module>modules/virtuoso</module>
     </modules>
 
     <profiles>
-        <profile>
-            <id>proprietary-deps</id>
-            <modules>
-                <module>modules/oracle-xe</module>
-                <module>modules/virtuoso</module>
-            </modules>
-        </profile>
         <profile>
             <id>shade</id>
         </profile>
