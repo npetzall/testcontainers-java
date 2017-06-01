@@ -2,11 +2,14 @@ package org.testcontainers.utility;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class JdbcDriverUtil {
@@ -23,17 +26,37 @@ public class JdbcDriverUtil {
         }
     }
 
+    private static Pattern GLOB_CHARACTER_PATTERN = Pattern.compile("(\\?|\\*)");
+
     public static URL[] getDrivers(String...driverPaths) {
         List<URL> urls = new ArrayList<>();
         for(String driverPath : driverPaths) {
-            urls.addAll(getDriversFromPath(driverPath));
+            for(String path : driverPath.split(":"))
+                urls.addAll(getDriversFromPath(driverPath));
         }
         return urls.toArray(new URL[urls.size()]);
     }
 
     public static List<URL> getDriversFromPath(String driverPath) {
-        List<URL> urls = new ArrayList<>();
-        PathGlob pathGlob = parse(Paths.get(driverPath));
+        if (isPathWithGlob(driverPath)) {
+            return findUsingGlob(driverPath);
+        } else {
+            try {
+                return Collections.singletonList(URI.create(driverPath).toURL());
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    public static boolean isPathWithGlob(String driverPath) {
+        return GLOB_CHARACTER_PATTERN.matcher(driverPath).find();
+    }
+
+    private static List<URL> findUsingGlob(String driverPath) {
+        ArrayList<URL> urls = new ArrayList<>();
+        PathGlob pathGlob = parse(driverPath);
         PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + pathGlob.glob);
         try (Stream<Path> pathStream = Files.walk(pathGlob.start, pathGlob.maxDepth, FileVisitOption.FOLLOW_LINKS)) {
             pathStream.filter(p -> pathMatcher.matches(p)).map(p -> {
@@ -52,40 +75,26 @@ public class JdbcDriverUtil {
     }
 
 
-    public static PathGlob parse(Path input) {
-        Path p;
-        if (input.startsWith("~")) {
-            p = Paths.get(System.getProperty("user.home")).resolve(input.subpath(1, input.getNameCount()));
-        } else {
-            p = input;
+    public static PathGlob parse(String input) {
+        String path = input.replaceAll("\\\\", "/");
+        if (path.startsWith("~/")) {
+            path = path.replace("~/", System.getProperty("user.home"));
+        } else if (path.matches("(?!)^$HOME.*")){
+            path = path.replace("$HOME", System.getProperty("user.home"));
         }
-
-        Path root;
-        boolean done = false;
-        boolean checkingDepth = false;
-        Iterator<Path> pathIterator = p.iterator();
-        if (p.isAbsolute()) {
-            root = p.getRoot();
-        } else {
-            root = pathIterator.next();
+        Matcher matcher = GLOB_CHARACTER_PATTERN.matcher(path);
+        matcher.find();
+        int firstGlobCharacter = matcher.start();
+        Path  root;
+        int globStart = path.lastIndexOf("/", firstGlobCharacter);
+        root = Paths.get(path.substring(0, globStart));
+        String glob = path.substring(globStart);
+        if (glob.contains("**")) {
+            return new PathGlob(root, path, Integer.MAX_VALUE);
         }
-        int maxDepth = 0;
-        while(pathIterator.hasNext() && !done) {
-            Path path = pathIterator.next();
-            if (path.toString().matches(".*[\\?\\*].*") && !checkingDepth) {;
-                checkingDepth = true;
-            } else if (!checkingDepth){
-                root = root.resolve(path);
-            }
-            if (checkingDepth) {
-                if (path.toString().equals("**")) {
-                    maxDepth = Integer.MAX_VALUE;
-                    done = true;
-                } else {
-                    maxDepth++;
-                }
-            }
+        if (glob.contains("/")) {
+            return new PathGlob(root, path, glob.split("/").length);
         }
-        return new PathGlob(root, p.toString(), maxDepth);
+        return new PathGlob(root, path, 1);
     }
 }
