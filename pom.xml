@@ -180,6 +180,7 @@
         <module>modules/nginx</module>
         <module>modules/mariadb</module>
         <module>modules/jdbc-test</module>
+        <module>modules/junit</module>
     </modules>
 
     <profiles>
