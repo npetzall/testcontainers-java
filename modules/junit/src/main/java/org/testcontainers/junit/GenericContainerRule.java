@@ -1,19 +1,19 @@
 package org.testcontainers.junit;
 
 import org.junit.AssumptionViolatedException;
-import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.MultipleFailureException;
 import org.junit.runners.model.Statement;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class GenericContainerRule<T extends GenericContainer> implements TestRule {
+public class GenericContainerRule<SELF extends GenericContainerRule<SELF, T>, T extends GenericContainer> implements ContainerRule<SELF> {
 
     private Supplier<T> containerSupplier;
     private T container;
@@ -23,7 +23,7 @@ public class GenericContainerRule<T extends GenericContainer> implements TestRul
         this.containerSupplier = containerSupplier;
     }
 
-    public GenericContainerRule<T> assumeDockerIsPresent() {
+    public SELF assumeDockerIsPresent() {
         final Supplier<T> originalContainerSupplier = containerSupplier;
         containerSupplier = () -> {
           try {
@@ -33,14 +33,14 @@ public class GenericContainerRule<T extends GenericContainer> implements TestRul
           }
             return originalContainerSupplier.get();
         };
-        return this;
+        return self();
     }
 
-    public GenericContainerRule withAssumptions(Consumer<T>...assumptions) {
+    public SELF withAssumptions(Consumer<T>...assumptions) {
         for (Consumer<T> consumer : assumptions) {
             this.assumptions.add(consumer);
         }
-        return this;
+        return self();
     }
 
     public T getContainer() {
@@ -50,23 +50,51 @@ public class GenericContainerRule<T extends GenericContainer> implements TestRul
     @Override
     public Statement apply(Statement base, Description description) {
         container = containerSupplier.get();
-        assumptions.forEach(a -> a.accept(container));
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
                 List<Throwable> errors = new ArrayList<Throwable>();
-
                 try {
+                    beforeStart(container);
                     container.start();
+                    afterStart(container);
+                    beforeTest(container);
                     base.evaluate();
-                } catch (Throwable e) {
-                    errors.add(e);
+                    afterTest(container);
+                } catch (Throwable t) {
+                    errors.add(t);
+                    error(t);
                 } finally {
+                    beforeStop(container);
                     container.stop();
+                    afterStop(container);
                 }
 
                 MultipleFailureException.assertEmpty(errors);
             }
         };
     }
+
+    protected void beforeStart(T container) {
+        assumptions.forEach(a -> a.accept(container));
+    }
+
+    protected void afterStart(T container) throws SQLException {
+    }
+
+    protected void beforeTest(T container) {
+    }
+
+    protected void afterTest(T container) {
+    }
+
+    protected void error(Throwable t) {
+    }
+
+    protected void beforeStop(T container) {
+    }
+
+    protected void afterStop(T container) {
+    }
+
 }

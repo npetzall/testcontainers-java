@@ -181,6 +181,7 @@
         <module>modules/mariadb</module>
         <module>modules/jdbc-test</module>
         <module>modules/junit</module>
+        <module>modules/junit-jdbc</module>
     </modules>
 
     <profiles>
